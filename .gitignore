@@ -1,0 +1,9 @@
+container/
+.ipynb_checkpoints/
+
+# ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+.jupyter/
