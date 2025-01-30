@@ -125,7 +125,17 @@
             color: white;
             margin-top: 80px;
             margin-bottom: 25px;
+            opacity: 1;
+            animation: fadeOpacity 3.5s infinite;
         }
+        @keyframes fadeOpacity {
+                0%, 100% {
+                    opacity: 1; 
+                }
+                50% {
+                    opacity: .6; 
+                }
+                }
 
         #foot{ 
             font-family: 'Playwrite VN';
@@ -190,7 +200,7 @@
             font-weight: bolder;
             font-size: 20px;
             margin-top:20px;
-            animation: fadeInOut 2s ease-in-out infinite;
+            animation: fadeInOut 4s ease-in-out infinite;
 /*             text-shadow: 2px 2px 4px rgba(101, 50, 121, 0.5); */
         }
         @keyframes fadeInOut {
