@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=Playwrite+VN:wght@100..400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+     <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+    <title>Mickey</title>
+  
+</head>
+<body>
+
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="page">
+
+        <div class="logo-area">
+            
+            <h1 class="title">M<span class="note">♪</span>ckey</h1>
+            <p class="subtitle">Music emotion recognition</p>
+        </div>
+
+
+        <div class="card">
+            <div class="visualizer-area" id="vizArea">
+            </div>
+
+            
+            <div class="controls">
+                <button id="stopBtn" disabled class="btn-icon btn-secondary" title="Stop">
+                    <i class="fa fa-stop"></i>
+                </button>
+                <button id="startBtn" class="btn-icon btn-mic" title="Record">
+                    <i class="fa fa-microphone"></i>
+                </button>
+                <button id="submitBtn" disabled class="btn-icon btn-secondary" title="Submit">
+                    <i class="fa fa-paper-plane-o"></i>
+                </button>
+            </div>
+
+            <p id="status" class="status"></p>
+
+            <audio id="audioPlayer" controls style="display:none;"></audio>
+
+            <div class="emotion-wrap" id="emotionWrap">
+                {% if emotion %}
+                <div class="emotion-tag" id="emotionDisplay">{{emotion}}</div>
+                {% else %}
+                <div style="font-size:12px; color: var(--blue-300); opacity:0.5; font-style:italic; font-family: 'Playwrite VN', cursive;">
+                    Record audio to detect emotion
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if img_base64 %}
+        <div class="spectrogram-section">
+            <p class="spec-label">Audio Spectrogram</p>
+            <div class="spec-frame">
+                <img src="data:image/png;base64,{{ img_base64 }}" alt="Spectrogram">
+            </div>
+        </div>
+        {% endif %}
+
+        <p class="footer">Mickey identifies emotions in music using ML</p>
+
+    </div>
+
+    <form id="uploadForm" action="/process_audio/" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" id="audioFile" />
+        <input type="submit" />
+    </form>
+
+    <script>
+        const vizArea = document.getElementById('vizArea');
+        const numBars = 36;
+        const bars = [];
+        for (let i = 0; i < numBars; i++) {
+            const b = document.createElement('div');
+            b.className = 'bar';
+            const baseH = 8 + Math.sin(i * 0.5) * 6 + Math.random() * 8;
+            b.style.height = baseH + 'px';
+            b.style.setProperty('--dur', (0.6 + Math.random() * 0.7).toFixed(2) + 's');
+            b.style.setProperty('--del', (i * 0.04).toFixed(2) + 's');
+            vizArea.appendChild(b);
+            bars.push(b);
+        }
+
+        let mediaRecorder, audioChunks = [], recordingTimeout;
+        const startBtn   = document.getElementById('startBtn');
+        const stopBtn    = document.getElementById('stopBtn');
+        const submitBtn  = document.getElementById('submitBtn');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const audioFile   = document.getElementById('audioFile');
+        const status      = document.getElementById('status');
+
+        function setRecordingState(active) {
+            bars.forEach(b => {
+                b.classList.toggle('active', active);
+            });
+            startBtn.classList.toggle('recording', active);
+        }
+
+        startBtn.addEventListener('click', async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+
+            mediaRecorder.onstop = () => {
+                setRecordingState(false);
+                const blob = new Blob(audioChunks, { type: 'audio/wav' });
+                const file = new File([blob], 'recording.wav', { type: 'audio/wav' });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                audioFile.files = dt.files;
+
+                audioPlayer.src = URL.createObjectURL(blob);
+                audioPlayer.style.display = 'block';
+                submitBtn.disabled = false;
+                status.textContent = 'Ready — review and submit';
+            };
+
+            mediaRecorder.start();
+            setRecordingState(true);
+            status.textContent = 'Recording…';
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+
+            recordingTimeout = setTimeout(() => {
+                mediaRecorder.stop();
+                status.textContent = 'Time limit reached';
+                stopBtn.disabled = true;
+                startBtn.disabled = false;
+            }, 30000);
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                clearTimeout(recordingTimeout);
+                status.textContent = 'Recording stopped';
+            }
+            stopBtn.disabled = true;
+            startBtn.disabled = false;
+        });
+
+        submitBtn.addEventListener('click', () => {
+            status.textContent = 'Analysing…';
+            document.getElementById('uploadForm').submit();
+        });
+    </script>
+</body>
+</html>
